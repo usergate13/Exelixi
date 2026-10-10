@@ -79,7 +79,8 @@ try{Object.assign(S,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
 const $=i=>document.getElementById(i),save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=n=>Math.round(Math.abs(n)).toLocaleString('en-US'),raw=n=>(n<0?'-':'')+'€'+num(n);
-const eur=n=>S.eye?'€•••':raw(n),chg=n=>S.eye?'•••':(n<0?'-':'+')+num(n);
+const eur=n=>S.eye?'€•••':raw(n),pc=x=>(Math.round(x*10)/10)+'%';
+const chg=(d,b)=>S.eye?(b?(d<0?'-':'+')+pc(Math.abs(d/b*100)):'-'):(d<0?'-':'+')+num(d);
 const dm=d=>{const[y,m,x]=d.split('-');return +x+'.'+ +m+'.'+y},dms=d=>{const[y,m,x]=d.split('-');return +x+'.'+ +m};
 const month=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,7);
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -104,12 +105,12 @@ function tabsHTML(){
 function nice(x){if(!(x>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(x))),n=x/p;return(n<=1?1:n<=2?2:n<=5?5:10)*p}
 
 function tile(s){
-  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id,R[0]);
+  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id,R[0]),tot=val(sel,'t');
   let t=`<button class="tile${S.hidden.includes(s.id)?' off':''}" data-a="hide" data-id="${s.id}"><div class="n"><i style="background:${s.c}"></i>${esc(s.name)}</div>`;
   if(v==null)return t+'<div class="v">-</div><div class="mu">no entry</div></button>';
-  t+=`<div class="v">${eur(v)}</div>`;
-  if(p>=0){const d=v-val(p,s.id);t+=`<div class="${d<0?'dn':'up'}">${chg(d)}</div>`}else t+='<div class="mu">first entry</div>';
-  if(f>=0&&f<sel){const d=v-val(f,s.id);t+=`<div class="mu">since ${dms(E[f].date)} <span class="${d<0?'dn':'up'}">${chg(d)}</span></div>`}
+  t+=`<div class="v">${S.eye?(tot?pc(v/tot*100):'-'):eur(v)}</div>`;
+  if(p>=0){const d=v-val(p,s.id);t+=`<div class="${d<0?'dn':'up'}">${chg(d,val(p,s.id))}</div>`}else t+='<div class="mu">first entry</div>';
+  if(f>=0&&f<sel){const d=v-val(f,s.id);t+=`<div class="mu">since ${dms(E[f].date)} <span class="${d<0?'dn':'up'}">${chg(d,val(f,s.id))}</span></div>`}
   return t+'</button>';
 }
 function head(){
@@ -132,7 +133,7 @@ function chartHTML(){
   const E=S.entries;
   if(R[1]-R[0]<1)return E.length?'<p class="hint">Add a second balance update to see the chart.</p>':'';
   G=geo();let h='<svg id="ch" viewBox="0 0 360 250" role="img" aria-label="Balance history chart">';
-  for(let v=0;v<=G.top+1e-9;v+=G.st){const y=G.y(v);h+=`<line x1="${G.L}" x2="${G.W-G.R}" y1="${y}" y2="${y}" stroke="#2a2e38"/><text x="${G.L-6}" y="${y+4}" fill="#9aa0ad" font-size="11" text-anchor="end">${Math.round(v/100)/10}k</text>`}
+  for(let v=0;v<=G.top+1e-9;v+=G.st){const y=G.y(v);h+=`<line x1="${G.L}" x2="${G.W-G.R}" y1="${y}" y2="${y}" stroke="#2a2e38"/><text x="${G.L-6}" y="${y+4}" fill="#9aa0ad" font-size="11" text-anchor="end">${S.eye?Math.round(v/G.top*100)+'%':Math.round(v/100)/10+'k'}</text>`}
   const n=Math.min(8,R[1]-R[0]+1);
   for(let k=0;k<n;k++){const t=G.t0+(G.t1-G.t0)*k/(n-1);h+=`<text x="${G.x(t)}" y="244" fill="#9aa0ad" font-size="11" text-anchor="${k?k==n-1?'end':'middle':'start'}">${new Date(t).toLocaleString('en',{month:'short'})}</text>`}
   G.vis.forEach(s=>{let d='';for(let i=R[0];i<=R[1];i++){const v=val(i,s.id);if(v!=null)d+=(d?'L':'M')+G.x(+new Date(E[i].date)).toFixed(1)+' '+G.y(v).toFixed(1)}h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-dasharray="${s.d}" stroke-linecap="round"/>`});
@@ -150,16 +151,17 @@ function onMove(ev){
   S.entries.forEach((e,i)=>{if(i<R[0]||i>R[1])return;const d=Math.abs(G.x(+new Date(e.date))-fx);if(d<bd){bd=d;b=i}});
   if(b!==sel){sel=b;head();cross()}
 }
+function gcur(g){for(let j=S.entries.length-1;j>=0;j--){const v=val(j,g.acc);if(v!=null)return v}return 0}
 function goalCard(g){
-  let cur=0;for(let j=S.entries.length-1;j>=0;j--){const v=val(j,g.acc);if(v!=null){cur=v;break}}
+  const cur=gcur(g);
   const rem=Math.max(0,g.target-cur),pct=Math.min(100,Math.round(cur/g.target*1000)/10);
   const[gy,gm]=g.date.split('-'),n=new Date(),mo=Math.max(0,(+gy-n.getFullYear())*12+(+gm-1-n.getMonth()));
   const acc=g.acc==='t'?'All accounts':(S.accounts.find(a=>a.id===g.acc)||{name:'Account'}).name;
   const when=new Date(+gy,+gm-1,1).toLocaleString('en',{month:'long',year:'numeric'});
-  return `<section class="goal"><h2>${esc(g.name)}</h2><div class="s">${esc(acc)} · by ${when} · target ${eur(g.target)}</div>
-  <div class="g2"><div><b>${S.eye?'•••':pct+'%'}</b><span>complete</span></div><div><b>${eur(rem)}</b><span>remaining</span></div></div>
-  <div class="bar"><i style="width:${S.eye?0:pct}%"></i></div>
-  <div class="g2"><div><b>${mo}</b><span>months remaining</span></div><div><b>${eur(mo?rem/mo:rem)}</b><span>needed per month</span></div></div></section>`;
+  return `<section class="goal"><h2>${esc(g.name)}</h2><div class="s">${esc(acc)} · by ${when}${S.eye?'':' · target '+eur(g.target)}</div>
+  <div class="g2"><div><b>${pct}%</b><span>complete</span></div><div><b>${S.eye?pc(rem/g.target*100):eur(rem)}</b><span>remaining</span></div></div>
+  <div class="bar"><i style="width:${pct}%"></i></div>
+  <div class="g2"><div><b>${mo}</b><span>months remaining</span></div><div><b>${S.eye?pc((mo?rem/mo:rem)/g.target*100):eur(mo?rem/mo:rem)}</b><span>needed per month</span></div></div></section>`;
 }
 function render(){
   $('eye').innerHTML=S.eye?EYEOFF:EYE;
@@ -188,8 +190,9 @@ function saveEntry(i){
   const j=S.entries.findIndex(e=>e.date===d);if(j>=0)S.entries[j].v=v;else S.entries.push({date:d,v});
   S.entries.sort((a,b)=>a.date<b.date?-1:1);sel=S.entries.findIndex(e=>e.date===d);tab=d.slice(0,4);save();X();
 }
+function pastVal(i){const t=val(i,'t')||0,p=prev(i,'t');return S.eye?(p>=0?chg(t-val(p,'t'),val(p,'t')):'start'):eur(t)}
 function past(){
-  M('<h2>Edit past entries</h2>'+(S.entries.map((e,i)=>`<button class="li" data-a="edit" data-i="${i}"><span>${dm(e.date)}</span><span class="mu">${eur(val(i,'t')||0)}</span></button>`).reverse().join('')||'<p class="mu">No entries yet.</p>')+'<button class="mb" data-a="menu">Back</button>');
+  M('<h2>Edit past entries</h2>'+(S.entries.map((e,i)=>`<button class="li" data-a="edit" data-i="${i}"><span>${dm(e.date)}</span><span class="mu">${pastVal(i)}</span></button>`).reverse().join('')||'<p class="mu">No entries yet.</p>')+'<button class="mb" data-a="menu">Back</button>');
 }
 function newAcc(){
   M('<h2>Add saving account</h2><label for="an">Account name</label><input id="an" maxlength="30" placeholder="Savings account"><p class="err" id="er"></p><div class="row"><button class="mb" data-a="menu">Cancel</button><button class="mb p" data-a="saveacc">Save</button></div>');
@@ -198,7 +201,7 @@ function accs(){
   M('<h2>Manage saving accounts</h2>'+(S.accounts.map(a=>`<div class="li"><span><i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${a.c};margin-right:8px"></i>${esc(a.name)}</span><span><button class="sm" data-a="ren" data-id="${a.id}">Rename</button> <button class="sm" data-a="delacc" data-id="${a.id}">Delete</button></span></div>`).join('')||'<p class="mu">No accounts yet.</p>')+'<button class="mb" data-a="menu">Back</button>');
 }
 function goalsView(){
-  M('<h2>Goals</h2>'+(S.goals.map((g,i)=>`<button class="li" data-a="editgoal" data-i="${i}"><span>${esc(g.name)}</span><span class="mu">€${num(g.target)}</span></button>`).join('')||'<p class="mu">No goals yet.</p>')+'<button class="mb p" data-a="newgoal">Add goal</button><button class="mb" data-a="menu">Back</button>');
+  M('<h2>Goals</h2>'+(S.goals.map((g,i)=>`<button class="li" data-a="editgoal" data-i="${i}"><span>${esc(g.name)}</span><span class="mu">${S.eye?Math.min(100,Math.round(gcur(g)/g.target*1000)/10)+'%':'€'+num(g.target)}</span></button>`).join('')||'<p class="mu">No goals yet.</p>')+'<button class="mb p" data-a="newgoal">Add goal</button><button class="mb" data-a="menu">Back</button>');
 }
 function goalForm(i){
   const g=i>=0?S.goals[i]:{name:'',acc:'t',target:'',date:''};
