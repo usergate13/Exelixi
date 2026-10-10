@@ -27,7 +27,9 @@ h1{margin:0;font-size:2rem;font-weight:600}
 .tile .n{color:var(--mu)}
 .tile .v{font-size:1.7rem;font-weight:700;margin:2px 0}
 .up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mu)}
-svg{width:100%;display:block;touch-action:pan-y;margin-top:18px}
+#ch{width:100%;display:block;touch-action:pan-y;margin-top:18px}
+.ib{display:inline-flex;align-items:center;justify-content:center}
+.ib svg{width:24px;height:24px}
 .hint{color:var(--mu);margin:6px 0 16px;font-size:.95rem}
 .goal{border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:16px}
 .goal h2{margin:0 0 4px;font-size:1.5rem}
@@ -57,7 +59,7 @@ input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--l
 </head>
 <body>
 <main>
-  <div class="top"><h1>Exelixi</h1><div><button class="ib" data-a="eye" id="eye" aria-label="Show or hide amounts"></button><button class="ib" data-a="menu" aria-label="Menu">☰</button></div></div>
+  <div class="top"><h1>Exelixi</h1><div><button class="ib" data-a="eye" id="eye" aria-label="Show or hide amounts"></button><button class="ib" data-a="menu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div></div>
   <div id="bn"></div>
   <div id="hd"></div>
   <div id="cw"></div>
@@ -67,6 +69,7 @@ input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--l
 <input type="file" id="file" accept="application/json" hidden>
 
 <script>
+const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEOFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
 const K='exelixi-v2',COL=['#3b82e0','#f26b3a','#22b573','#f0a50e','#ec7bab','#6b4fd8','#2bb7c9','#c9a227'],DASH=['','7 5','2 4','9 4 2 4','11 6','4 4'];
 let S={accounts:[],entries:[],goals:[],email:'',hidden:[],eye:false,lastBackup:''},sel=-1,G;
 try{Object.assign(S,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
@@ -143,7 +146,7 @@ function goalCard(g){
   <div class="g2"><div><b>${mo}</b><span>months remaining</span></div><div><b>${eur(mo?rem/mo:rem)}</b><span>needed per month</span></div></div></section>`;
 }
 function render(){
-  $('eye').textContent=S.eye?'🙈':'👁';
+  $('eye').innerHTML=S.eye?EYEOFF:EYE;
   $('bn').innerHTML=S.entries.length&&S.lastBackup!==month()?'<div class="goal" style="padding:14px"><div class="s" style="margin:0 0 10px">Time for your monthly backup.</div><button class="sm" data-a="mail">Email backup</button></div>':'';
   head();$('cw').innerHTML=chartHTML();
   $('gl').innerHTML=S.goals.map(goalCard).join('');
