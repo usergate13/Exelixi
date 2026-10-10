@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Exelixi</title>
+<style>
+:root{--bg:#0d0f14;--card:#1c1f27;--card2:#161920;--line:#2a2e38;--tx:#f1f2f5;--mu:#9aa0ad;--up:#4cc777;--dn:#f07a6a;--ac:#3b82e0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:560px;margin:0 auto;padding:16px 14px 40px}
+button{font:inherit;color:var(--tx);cursor:pointer}
+.top{display:flex;align-items:center;justify-content:space-between;margin:8px 0 22px}
+h1{margin:0;font-size:2rem;font-weight:600}
+.ib{width:54px;height:54px;border-radius:50%;background:transparent;border:1px solid var(--line);font-size:22px;margin-left:10px;padding:0}
+.sm{background:transparent;border:1px solid var(--line);border-radius:12px;padding:8px 16px;font-weight:600}
+.date{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.date b{font-size:1.6rem}
+.date span{margin-left:auto;color:var(--mu);font-size:.9rem;text-align:right}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{background:var(--card);border-radius:18px;padding:14px 16px;border:0;text-align:left;width:100%;min-height:104px}
+.tile.off{opacity:.45}
+.tile i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:8px;vertical-align:-1px}
+.tile .n{color:var(--mu)}
+.tile .v{font-size:1.7rem;font-weight:700;margin:2px 0}
+.up{color:var(--up)}.dn{color:var(--dn)}.mu{color:var(--mu)}
+#ch{width:100%;display:block;touch-action:pan-y;margin-top:18px}
+.ib{display:inline-flex;align-items:center;justify-content:center}
+.ib svg{width:24px;height:24px}
+.hint{color:var(--mu);margin:6px 0 16px;font-size:.95rem}
+.goal{border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:16px}
+.goal h2{margin:0 0 4px;font-size:1.5rem}
+.goal .s{color:var(--mu);font-size:.95rem;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.g2 div{background:var(--card);border-radius:14px;padding:12px 14px}
+.g2 b{display:block;font-size:1.6rem}
+.g2 span{color:var(--mu)}
+.bar{height:14px;background:var(--card);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ac)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+.ov.on{display:flex}
+.sheet{background:var(--card2);border:1px solid var(--line);border-radius:26px;padding:22px;width:100%;max-width:520px;max-height:90vh;overflow:auto}
+.sheet h2{margin:0 0 16px}
+.mb{display:block;width:100%;background:transparent;border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:12px;font-weight:600;font-size:1.05rem}
+.mb.p{background:#f1efea;color:#111}
+label{display:block;margin:10px 0 4px;color:var(--mu);font-size:.9rem}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit}
+.row{display:flex;gap:10px;margin-top:14px}
+.row .mb{flex:1;margin:0}
+.li{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;width:100%;background:transparent;text-align:left}
+.note{color:var(--mu);font-size:.85rem;margin-top:12px}
+.err{color:var(--dn);font-size:.9rem;min-height:1.2em;margin:8px 0 0}
+.empty{color:var(--mu);padding:30px 0;text-align:center}
+:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><h1>Exelixi</h1><div><button class="ib" data-a="eye" id="eye" aria-label="Show or hide amounts"></button><button class="ib" data-a="menu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div></div>
+  <div id="bn"></div>
+  <div id="hd"></div>
+  <div id="cw"></div>
+  <div id="gl"></div>
+</main>
+<div class="ov" id="ov"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<input type="file" id="file" accept="application/json" hidden>
+
+<script>
+const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEOFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+const K='exelixi-v2',COL=['#3b82e0','#f26b3a','#22b573','#f0a50e','#ec7bab','#6b4fd8','#2bb7c9','#c9a227'],DASH=['','7 5','2 4','9 4 2 4','11 6','4 4'];
+let S={accounts:[],entries:[],goals:[],email:'',hidden:[],eye:false,lastBackup:''},sel=-1,G;
+try{Object.assign(S,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
+const $=i=>document.getElementById(i),save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=n=>Math.round(Math.abs(n)).toLocaleString('en-US'),raw=n=>(n<0?'-':'')+'€'+num(n);
+const eur=n=>S.eye?'€•••':raw(n),chg=n=>S.eye?'•••':(n<0?'-':'+')+num(n);
+const dm=d=>{const[y,m,x]=d.split('-');return +x+'.'+ +m+'.'+y},dms=d=>{const[y,m,x]=d.split('-');return +x+'.'+ +m};
+const month=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,7);
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const uid=()=>Math.random().toString(36).slice(2,8);
+const series=()=>[{id:'t',name:'Total',c:COL[0],d:''}].concat(S.accounts);
+function val(i,a){const v=S.entries[i].v;if(a!=='t')return v[a];let s=0,k=0;S.accounts.forEach(x=>{if(v[x.id]!=null){s+=v[x.id];k++}});return k?s:null}
+function prev(i,a){for(let j=i-1;j>=0;j--)if(val(j,a)!=null)return j;return -1}
+function first(a){for(let j=0;j<S.entries.length;j++)if(val(j,a)!=null)return j;return -1}
+function nice(x){if(!(x>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(x))),n=x/p;return(n<=1?1:n<=2?2:n<=5?5:10)*p}
+
+function tile(s){
+  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id);
+  let t=`<button class="tile${S.hidden.includes(s.id)?' off':''}" data-a="hide" data-id="${s.id}"><div class="n"><i style="background:${s.c}"></i>${esc(s.name)}</div>`;
+  if(v==null)return t+'<div class="v">-</div><div class="mu">no entry</div></button>';
+  t+=`<div class="v">${eur(v)}</div>`;
+  if(p>=0){const d=v-val(p,s.id);t+=`<div class="${d<0?'dn':'up'}">${chg(d)}</div>`}else t+='<div class="mu">first entry</div>';
+  if(f>=0&&f<sel){const d=v-val(f,s.id);t+=`<div class="mu">since ${dms(E[f].date)} <span class="${d<0?'dn':'up'}">${chg(d)}</span></div>`}
+  return t+'</button>';
+}
+function head(){
+  const E=S.entries;let h='';
+  if(!E.length)h=`<p class="empty">${S.accounts.length?'Add your first balance update from the menu.':'Add a saving account from the menu to get started.'}</p>`;
+  else{
+    if(sel<0||sel>=E.length)sel=E.length-1;
+    h=`<div class="date"><b>${dm(E[sel].date)}</b><button class="sm" data-a="editsel">Edit</button><span>${sel>0?'change since '+dm(E[sel-1].date):'first entry'}</span></div><div class="grid">${series().map(tile).join('')}</div>`;
+  }
+  $('hd').innerHTML=h;
+}
+function geo(){
+  const E=S.entries,W=360,H=250,L=42,R=12,T=10,B=26,t0=+new Date(E[0].date),t1=+new Date(E[E.length-1].date);
+  const vis=series().filter(s=>!S.hidden.includes(s.id));let mx=0;
+  vis.forEach(s=>E.forEach((e,i)=>{const v=val(i,s.id);if(v!=null&&v>mx)mx=v}));
+  const st=nice(mx/4),top=Math.ceil(mx/st)*st||st;
+  return{W,H,L,R,T,B,t0,t1,vis,st,top,x:t=>L+(t1>t0?(t-t0)/(t1-t0):0)*(W-L-R),y:v=>T+(1-v/top)*(H-T-B)};
+}
+function chartHTML(){
+  const E=S.entries;
+  if(E.length<2)return E.length?'<p class="hint">Add a second balance update to see the chart.</p>':'';
+  G=geo();let h='<svg id="ch" viewBox="0 0 360 250" role="img" aria-label="Balance history chart">';
+  for(let v=0;v<=G.top+1e-9;v+=G.st){const y=G.y(v);h+=`<line x1="${G.L}" x2="${G.W-G.R}" y1="${y}" y2="${y}" stroke="#2a2e38"/><text x="${G.L-6}" y="${y+4}" fill="#9aa0ad" font-size="11" text-anchor="end">${Math.round(v/100)/10}k</text>`}
+  const n=Math.min(8,E.length);
+  for(let k=0;k<n;k++){const t=G.t0+(G.t1-G.t0)*k/(n-1);h+=`<text x="${G.x(t)}" y="244" fill="#9aa0ad" font-size="11" text-anchor="${k?k==n-1?'end':'middle':'start'}">${new Date(t).toLocaleString('en',{month:'short'})}</text>`}
+  G.vis.forEach(s=>{let d='';E.forEach((e,i)=>{const v=val(i,s.id);if(v!=null)d+=(d?'L':'M')+G.x(+new Date(e.date)).toFixed(1)+' '+G.y(v).toFixed(1)});h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-dasharray="${s.d}" stroke-linecap="round"/>`});
+  return h+'<g id="cross"></g></svg><p class="hint">Drag across the chart. Tap a tile to hide or show its line.</p>';
+}
+function cross(){
+  const g=$('cross');if(!g||!S.entries.length)return;
+  const x=G.x(+new Date(S.entries[sel].date));
+  let h=`<line x1="${x}" x2="${x}" y1="${G.T}" y2="${G.H-G.B}" stroke="#9aa0ad"/>`;
+  G.vis.forEach(s=>{const v=val(sel,s.id);if(v!=null)h+=`<circle cx="${x}" cy="${G.y(v)}" r="5" fill="${s.c}"/>`});
+  g.innerHTML=h;
+}
+function onMove(ev){
+  const r=$('ch').getBoundingClientRect(),fx=(ev.clientX-r.left)/r.width*360;let b=0,bd=1e9;
+  S.entries.forEach((e,i)=>{const d=Math.abs(G.x(+new Date(e.date))-fx);if(d<bd){bd=d;b=i}});
+  if(b!==sel){sel=b;head();cross()}
+}
+function goalCard(g){
+  let cur=0;for(let j=S.entries.length-1;j>=0;j--){const v=val(j,g.acc);if(v!=null){cur=v;break}}
+  const rem=Math.max(0,g.target-cur),pct=Math.min(100,Math.round(cur/g.target*1000)/10);
+  const[gy,gm]=g.date.split('-'),n=new Date(),mo=Math.max(0,(+gy-n.getFullYear())*12+(+gm-1-n.getMonth()));
+  const acc=g.acc==='t'?'All accounts':(S.accounts.find(a=>a.id===g.acc)||{name:'Account'}).name;
+  const when=new Date(+gy,+gm-1,1).toLocaleString('en',{month:'long',year:'numeric'});
+  return `<section class="goal"><h2>${esc(g.name)}</h2><div class="s">${esc(acc)} · by ${when} · target ${eur(g.target)}</div>
+  <div class="g2"><div><b>${S.eye?'•••':pct+'%'}</b><span>complete</span></div><div><b>${eur(rem)}</b><span>remaining</span></div></div>
+  <div class="bar"><i style="width:${S.eye?0:pct}%"></i></div>
+  <div class="g2"><div><b>${mo}</b><span>months remaining</span></div><div><b>${eur(mo?rem/mo:rem)}</b><span>needed per month</span></div></div></section>`;
+}
+function render(){
+  $('eye').innerHTML=S.eye?EYEOFF:EYE;
+  $('bn').innerHTML=S.entries.length&&S.lastBackup!==month()?'<div class="goal" style="padding:14px"><div class="s" style="margin:0 0 10px">Time for your monthly backup.</div><button class="sm" data-a="mail">Email backup</button></div>':'';
+  head();$('cw').innerHTML=chartHTML();
+  $('gl').innerHTML=S.goals.map(goalCard).join('');
+  const c=$('ch');if(c){c.onpointerdown=c.onpointermove=onMove;cross()}
+}
+
+function M(h){$('ov').classList.add('on');$('sheet').innerHTML=h}
+function X(){$('ov').classList.remove('on');render()}
+const err=t=>{$('er').textContent=t};
+function menu(){
+  M('<h2>Menu</h2>'+[['Add balance update','add','p'],['Edit past entries','past'],['Add saving account','newacc'],['Manage saving accounts','accs'],['Goals','goals'],['Email monthly report','report'],['Email backup','mail'],['Export backup','exp'],['Import backup','imp'],['Report email address','addr'],['Close','close']].map(a=>`<button class="mb ${a[2]||''}" data-a="${a[1]}">${a[0]}</button>`).join('')+'<p class="note">Balances are stored only in this browser on this device.</p>');
+}
+function entryForm(i){
+  if(!S.accounts.length)return M('<h2>Add balance update</h2><p class="mu">Add a saving account first.</p><button class="mb" data-a="newacc">Add saving account</button><button class="mb" data-a="menu">Back</button>');
+  const e=i>=0?S.entries[i]:null,last=S.entries[S.entries.length-1],src=e?e.v:last?last.v:{};
+  M(`<h2>${e?'Edit entry':'Add balance update'}</h2><label for="fd">Date</label><input id="fd" type="date" value="${e?e.date:today()}">${S.accounts.map(a=>`<label>${esc(a.name)} (€)</label><input class="fa" data-id="${a.id}" type="number" step="any" inputmode="decimal" value="${src[a.id]==null?'':src[a.id]}">`).join('')}<p class="err" id="er"></p><div class="row"><button class="mb" data-a="menu">Cancel</button>${e?`<button class="mb" data-a="delent" data-i="${i}">Delete</button>`:''}<button class="mb p" data-a="saveent" data-i="${i}">Save</button></div>`);
+}
+function saveEntry(i){
+  const d=$('fd').value;if(!d)return err('Choose a date.');
+  const v={};document.querySelectorAll('.fa').forEach(x=>{if(x.value!==''&&!isNaN(parseFloat(x.value)))v[x.dataset.id]=parseFloat(x.value)});
+  if(!Object.keys(v).length)return err('Enter at least one balance.');
+  if(i>=0)S.entries.splice(i,1);
+  const j=S.entries.findIndex(e=>e.date===d);if(j>=0)S.entries[j].v=v;else S.entries.push({date:d,v});
+  S.entries.sort((a,b)=>a.date<b.date?-1:1);sel=S.entries.findIndex(e=>e.date===d);save();X();
+}
+function past(){
+  M('<h2>Edit past entries</h2>'+(S.entries.map((e,i)=>`<button class="li" data-a="edit" data-i="${i}"><span>${dm(e.date)}</span><span class="mu">${eur(val(i,'t')||0)}</span></button>`).reverse().join('')||'<p class="mu">No entries yet.</p>')+'<button class="mb" data-a="menu">Back</button>');
+}
+function newAcc(){
+  M('<h2>Add saving account</h2><label for="an">Account name</label><input id="an" maxlength="30" placeholder="Savings account"><p class="err" id="er"></p><div class="row"><button class="mb" data-a="menu">Cancel</button><button class="mb p" data-a="saveacc">Save</button></div>');
+}
+function accs(){
+  M('<h2>Manage saving accounts</h2>'+(S.accounts.map(a=>`<div class="li"><span><i style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${a.c};margin-right:8px"></i>${esc(a.name)}</span><span><button class="sm" data-a="ren" data-id="${a.id}">Rename</button> <button class="sm" data-a="delacc" data-id="${a.id}">Delete</button></span></div>`).join('')||'<p class="mu">No accounts yet.</p>')+'<button class="mb" data-a="menu">Back</button>');
+}
+function goalsView(){
+  M('<h2>Goals</h2>'+(S.goals.map((g,i)=>`<button class="li" data-a="editgoal" data-i="${i}"><span>${esc(g.name)}</span><span class="mu">€${num(g.target)}</span></button>`).join('')||'<p class="mu">No goals yet.</p>')+'<button class="mb p" data-a="newgoal">Add goal</button><button class="mb" data-a="menu">Back</button>');
+}
+function goalForm(i){
+  const g=i>=0?S.goals[i]:{name:'',acc:'t',target:'',date:''};
+  M(`<h2>${i>=0?'Edit goal':'Add goal'}</h2><label for="gn">Goal name</label><input id="gn" maxlength="40" value="${esc(g.name)}" placeholder="Emergency fund"><label for="ga">Account</label><select id="ga"><option value="t">All accounts</option>${S.accounts.map(a=>`<option value="${a.id}"${a.id===g.acc?' selected':''}>${esc(a.name)}</option>`).join('')}</select><label for="gt">Target sum (€)</label><input id="gt" type="number" min="1" step="any" inputmode="decimal" value="${g.target}"><label for="gd">Reach it by</label><input id="gd" type="month" value="${g.date}"><p class="err" id="er"></p><div class="row"><button class="mb" data-a="goals">Cancel</button>${i>=0?`<button class="mb" data-a="delgoal" data-i="${i}">Delete</button>`:''}<button class="mb p" data-a="savegoal" data-i="${i}">Save</button></div>`);
+}
+function saveGoal(i){
+  const g={name:$('gn').value.trim(),acc:$('ga').value,target:parseFloat($('gt').value)||0,date:$('gd').value};
+  if(!g.name||g.target<=0||!g.date)return err('Enter a name, a target sum, and a month.');
+  if(i>=0)S.goals[i]=g;else S.goals.push(g);save();goalsView();
+}
+function addr(){
+  M(`<h2>Report email address</h2><label for="em">Email address</label><input id="em" type="email" inputmode="email" value="${esc(S.email)}" placeholder="name@example.com"><div class="row"><button class="mb" data-a="menu">Cancel</button><button class="mb p" data-a="saveaddr">Save</button></div>`);
+}
+function report(){
+  const E=S.entries,i=E.length-1;if(i<0){M('<h2>Email monthly report</h2><p class="mu">Add a balance update first.</p><button class="mb" data-a="menu">Back</button>');return}
+  if(!S.email)return addr();
+  let t=`Exelixi report ${dm(E[i].date)}\n\n`;
+  series().forEach(s=>{const v=val(i,s.id);if(v==null)return;const p=prev(i,s.id);t+=`${s.name}: ${raw(v)}`+(p>=0?` (${v-val(p,s.id)<0?'-':'+'}${num(v-val(p,s.id))} since ${dm(E[p].date)})`:'')+'\n'});
+  location.href='mailto:'+S.email+'?subject='+encodeURIComponent('Exelixi monthly report')+'&body='+encodeURIComponent(t);
+}
+async function mail(){
+  S.lastBackup=month();save();
+  const j=JSON.stringify(S,null,1),f=new File([j],'exelixi-backup.json',{type:'application/json'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Exelixi backup'})}catch(e){}}
+  else location.href='mailto:'+S.email+'?subject='+encodeURIComponent('Exelixi backup')+'&body='+encodeURIComponent(j);
+  render();
+}
+function exp(){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));
+  a.download='exelixi-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+$('file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);if(!Array.isArray(d.accounts)||!Array.isArray(d.entries))throw 0;
+    if(!confirm('Replace your current data with this backup?'))return;
+    S.accounts=d.accounts.map((a,i)=>({id:String(a.id),name:String(a.name),c:a.c||COL[(i+1)%COL.length],d:a.d||''}));
+    S.entries=d.entries.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x=>({date:x.date,v:Object.fromEntries(Object.entries(x.v||{}).filter(p=>typeof p[1]==='number'))})).sort((a,b)=>a.date<b.date?-1:1);
+    S.goals=(d.goals||[]).filter(g=>g.name&&g.target>0&&g.date).map(g=>({name:String(g.name),acc:String(g.acc||'t'),target:+g.target,date:String(g.date)}));
+    S.email=String(d.email||'');S.hidden=[];sel=-1;save();X();
+  }catch(x){alert('That file is not a valid Exelixi backup.')}e.target.value=''};
+  r.readAsText(f);
+};
+
+const ACT={
+  eye:()=>{S.eye=!S.eye;save();render()},
+  menu,close:X,
+  hide:(i,id)=>{S.hidden=S.hidden.includes(id)?S.hidden.filter(x=>x!==id):S.hidden.concat(id);save();render()},
+  editsel:()=>entryForm(sel),add:()=>entryForm(-1),edit:i=>entryForm(i),
+  saveent:saveEntry,delent:i=>{if(confirm('Delete this entry?')){S.entries.splice(i,1);sel=-1;save();past()}},
+  past,newacc:newAcc,accs,
+  saveacc:()=>{const n=$('an').value.trim();if(!n)return err('Enter an account name.');const k=S.accounts.length;S.accounts.push({id:uid(),name:n,c:COL[(k+1)%COL.length],d:DASH[k%DASH.length]});save();accs()},
+  ren:(i,id)=>{const a=S.accounts.find(x=>x.id===id),n=prompt('Account name',a.name);if(n&&n.trim()){a.name=n.trim().slice(0,30);save();accs()}},
+  delacc:(i,id)=>{if(confirm('Delete this account and its balances?')){S.accounts=S.accounts.filter(x=>x.id!==id);S.entries.forEach(e=>delete e.v[id]);S.entries=S.entries.filter(e=>Object.keys(e.v).length);S.goals=S.goals.filter(g=>g.acc!==id);sel=-1;save();accs()}},
+  goals:goalsView,newgoal:()=>goalForm(-1),editgoal:i=>goalForm(i),savegoal:saveGoal,
+  delgoal:i=>{if(confirm('Delete this goal?')){S.goals.splice(i,1);save();goalsView()}},
+  report,mail:()=>{if(!S.email&&!(navigator.canShare))return addr();mail()},exp,imp:()=>$('file').click(),addr,
+  saveaddr:()=>{S.email=$('em').value.trim();save();menu()}
+};
+document.addEventListener('click',e=>{
+  if(e.target.id==='ov'){X();return}
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const f=ACT[b.dataset.a];if(f)f(b.dataset.i===undefined?-1:+b.dataset.i,b.dataset.id);
+});
+render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
