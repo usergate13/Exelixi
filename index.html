@@ -74,7 +74,7 @@ input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--l
 <script>
 const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEOFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
 const K='exelixi-v2',COL=['#3b82e0','#f26b3a','#22b573','#f0a50e','#ec7bab','#6b4fd8','#2bb7c9','#c9a227'],DASH=['','7 5','2 4','9 4 2 4','11 6','4 4'];
-let S={accounts:[],entries:[],goals:[],email:'',hidden:[],eye:false,lastBackup:''},sel=-1,G,tab=null,R=[0,0];
+let S={accounts:[],entries:[],goals:[],email:'',hidden:[],eye:false,lastBackup:''},sel=-1,G,tab=null,RNG=[0,0];
 try{Object.assign(S,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
 const $=i=>document.getElementById(i),save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -105,7 +105,7 @@ function tabsHTML(){
 function nice(x){if(!(x>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(x))),n=x/p;return(n<=1?1:n<=2?2:n<=5?5:10)*p}
 
 function tile(s){
-  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id,R[0]),tot=val(sel,'t');
+  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id,RNG[0]),tot=val(sel,'t');
   let t=`<button class="tile${S.hidden.includes(s.id)?' off':''}" data-a="hide" data-id="${s.id}"><div class="n"><i style="background:${s.c}"></i>${esc(s.name)}</div>`;
   if(v==null)return t+'<div class="v">-</div><div class="mu">no entry</div></button>';
   t+=`<div class="v">${S.eye?(tot?pc(v/tot*100):'-'):eur(v)}</div>`;
@@ -117,26 +117,26 @@ function head(){
   const E=S.entries;let h='';
   if(!E.length)h=`<p class="empty">${S.accounts.length?'Add your first balance update from the menu.':'Add a saving account from the menu to get started.'}</p>`;
   else{
-    R=range();if(sel<R[0]||sel>R[1])sel=R[1];
+    RNG=range();if(sel<RNG[0]||sel>RNG[1])sel=RNG[1];
     h=`<div class="date"><b>${dm(E[sel].date)}</b><button class="sm" data-a="editsel">Edit</button><span>${sel>0?'change since '+dm(E[sel-1].date):'first entry'}</span></div><div class="grid">${series().map(tile).join('')}</div>`;
   }
   $('hd').innerHTML=h;
 }
 function geo(){
-  const E=S.entries,W=360,H=250,L=42,R=12,T=10,B=26,t0=+new Date(E[R[0]].date),t1=+new Date(E[R[1]].date);
+  const E=S.entries,W=360,H=250,L=42,R=12,T=10,B=26,t0=+new Date(E[RNG[0]].date),t1=+new Date(E[RNG[1]].date);
   const vis=series().filter(s=>!S.hidden.includes(s.id));let mx=0;
-  vis.forEach(s=>{for(let i=R[0];i<=R[1];i++){const v=val(i,s.id);if(v!=null&&v>mx)mx=v}});
+  vis.forEach(s=>{for(let i=RNG[0];i<=RNG[1];i++){const v=val(i,s.id);if(v!=null&&v>mx)mx=v}});
   const st=nice(mx/4),top=Math.ceil(mx/st)*st||st;
   return{W,H,L,R,T,B,t0,t1,vis,st,top,x:t=>L+(t1>t0?(t-t0)/(t1-t0):0)*(W-L-R),y:v=>T+(1-v/top)*(H-T-B)};
 }
 function chartHTML(){
   const E=S.entries;
-  if(R[1]-R[0]<1)return E.length?'<p class="hint">Add a second balance update to see the chart.</p>':'';
+  if(RNG[1]-RNG[0]<1)return E.length?'<p class="hint">Add a second balance update to see the chart.</p>':'';
   G=geo();let h='<svg id="ch" viewBox="0 0 360 250" role="img" aria-label="Balance history chart">';
   for(let v=0;v<=G.top+1e-9;v+=G.st){const y=G.y(v);h+=`<line x1="${G.L}" x2="${G.W-G.R}" y1="${y}" y2="${y}" stroke="#2a2e38"/><text x="${G.L-6}" y="${y+4}" fill="#9aa0ad" font-size="11" text-anchor="end">${S.eye?Math.round(v/G.top*100)+'%':Math.round(v/100)/10+'k'}</text>`}
-  const n=Math.min(8,R[1]-R[0]+1);
+  const n=Math.min(8,RNG[1]-RNG[0]+1);
   for(let k=0;k<n;k++){const t=G.t0+(G.t1-G.t0)*k/(n-1);h+=`<text x="${G.x(t)}" y="244" fill="#9aa0ad" font-size="11" text-anchor="${k?k==n-1?'end':'middle':'start'}">${new Date(t).toLocaleString('en',{month:'short'})}</text>`}
-  G.vis.forEach(s=>{let d='';for(let i=R[0];i<=R[1];i++){const v=val(i,s.id);if(v!=null)d+=(d?'L':'M')+G.x(+new Date(E[i].date)).toFixed(1)+' '+G.y(v).toFixed(1)}h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-dasharray="${s.d}" stroke-linecap="round"/>`});
+  G.vis.forEach(s=>{let d='';for(let i=RNG[0];i<=RNG[1];i++){const v=val(i,s.id);if(v!=null)d+=(d?'L':'M')+G.x(+new Date(E[i].date)).toFixed(1)+' '+G.y(v).toFixed(1)}h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-dasharray="${s.d}" stroke-linecap="round"/>`});
   return h+'<g id="cross"></g></svg><p class="hint">Drag across the chart. Tap a tile to hide or show its line.</p>';
 }
 function cross(){
@@ -148,7 +148,7 @@ function cross(){
 }
 function onMove(ev){
   const r=$('ch').getBoundingClientRect(),fx=(ev.clientX-r.left)/r.width*360;let b=0,bd=1e9;
-  S.entries.forEach((e,i)=>{if(i<R[0]||i>R[1])return;const d=Math.abs(G.x(+new Date(e.date))-fx);if(d<bd){bd=d;b=i}});
+  S.entries.forEach((e,i)=>{if(i<RNG[0]||i>RNG[1])return;const d=Math.abs(G.x(+new Date(e.date))-fx);if(d<bd){bd=d;b=i}});
   if(b!==sel){sel=b;head();cross()}
 }
 function gcur(g){for(let j=S.entries.length-1;j>=0;j--){const v=val(j,g.acc);if(v!=null)return v}return 0}
