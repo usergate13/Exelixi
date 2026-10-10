@@ -30,6 +30,9 @@ h1{margin:0;font-size:2rem;font-weight:600}
 #ch{width:100%;display:block;touch-action:pan-y;margin-top:18px}
 .ib{display:inline-flex;align-items:center;justify-content:center}
 .ib svg{width:24px;height:24px}
+.tabs{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);border-radius:20px;padding:8px 18px;background:transparent;font-weight:600}
+.tab.on{background:#f1efea;color:#111;border-color:#f1efea}
 .hint{color:var(--mu);margin:6px 0 16px;font-size:.95rem}
 .goal{border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:16px}
 .goal h2{margin:0 0 4px;font-size:1.5rem}
@@ -71,7 +74,7 @@ input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--l
 <script>
 const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEOFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
 const K='exelixi-v2',COL=['#3b82e0','#f26b3a','#22b573','#f0a50e','#ec7bab','#6b4fd8','#2bb7c9','#c9a227'],DASH=['','7 5','2 4','9 4 2 4','11 6','4 4'];
-let S={accounts:[],entries:[],goals:[],email:'',hidden:[],eye:false,lastBackup:''},sel=-1,G;
+let S={accounts:[],entries:[],goals:[],email:'',hidden:[],eye:false,lastBackup:''},sel=-1,G,tab=null,R=[0,0];
 try{Object.assign(S,JSON.parse(localStorage.getItem(K))||{})}catch(e){}
 const $=i=>document.getElementById(i),save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -84,11 +87,24 @@ const uid=()=>Math.random().toString(36).slice(2,8);
 const series=()=>[{id:'t',name:'Total',c:COL[0],d:''}].concat(S.accounts);
 function val(i,a){const v=S.entries[i].v;if(a!=='t')return v[a];let s=0,k=0;S.accounts.forEach(x=>{if(v[x.id]!=null){s+=v[x.id];k++}});return k?s:null}
 function prev(i,a){for(let j=i-1;j>=0;j--)if(val(j,a)!=null)return j;return -1}
-function first(a){for(let j=0;j<S.entries.length;j++)if(val(j,a)!=null)return j;return -1}
+function first(a,lo){for(let j=lo||0;j<S.entries.length;j++)if(val(j,a)!=null)return j;return -1}
+const years=()=>[...new Set(S.entries.map(e=>e.date.slice(0,4)))];
+function range(){
+  const E=S.entries,ys=years();
+  if(tab!=='all'&&!ys.includes(tab))tab=ys.length>1?ys[ys.length-1]:'all';
+  if(tab==='all'||!E.length)return[0,Math.max(0,E.length-1)];
+  const lo=E.findIndex(e=>e.date.slice(0,4)===tab);let hi=lo;
+  while(hi+1<E.length&&E[hi+1].date.slice(0,4)===tab)hi++;
+  return[lo>0?lo-1:lo,hi];
+}
+function tabsHTML(){
+  const ys=years();if(ys.length<2)return'';
+  return'<div class="tabs">'+ys.concat('all').map(y=>`<button class="tab${tab===y?' on':''}" data-a="tab" data-id="${y}">${y==='all'?'All':y}</button>`).join('')+'</div>';
+}
 function nice(x){if(!(x>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(x))),n=x/p;return(n<=1?1:n<=2?2:n<=5?5:10)*p}
 
 function tile(s){
-  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id);
+  const E=S.entries,v=val(sel,s.id),p=prev(sel,s.id),f=first(s.id,R[0]);
   let t=`<button class="tile${S.hidden.includes(s.id)?' off':''}" data-a="hide" data-id="${s.id}"><div class="n"><i style="background:${s.c}"></i>${esc(s.name)}</div>`;
   if(v==null)return t+'<div class="v">-</div><div class="mu">no entry</div></button>';
   t+=`<div class="v">${eur(v)}</div>`;
@@ -100,26 +116,26 @@ function head(){
   const E=S.entries;let h='';
   if(!E.length)h=`<p class="empty">${S.accounts.length?'Add your first balance update from the menu.':'Add a saving account from the menu to get started.'}</p>`;
   else{
-    if(sel<0||sel>=E.length)sel=E.length-1;
+    R=range();if(sel<R[0]||sel>R[1])sel=R[1];
     h=`<div class="date"><b>${dm(E[sel].date)}</b><button class="sm" data-a="editsel">Edit</button><span>${sel>0?'change since '+dm(E[sel-1].date):'first entry'}</span></div><div class="grid">${series().map(tile).join('')}</div>`;
   }
   $('hd').innerHTML=h;
 }
 function geo(){
-  const E=S.entries,W=360,H=250,L=42,R=12,T=10,B=26,t0=+new Date(E[0].date),t1=+new Date(E[E.length-1].date);
+  const E=S.entries,W=360,H=250,L=42,R=12,T=10,B=26,t0=+new Date(E[R[0]].date),t1=+new Date(E[R[1]].date);
   const vis=series().filter(s=>!S.hidden.includes(s.id));let mx=0;
-  vis.forEach(s=>E.forEach((e,i)=>{const v=val(i,s.id);if(v!=null&&v>mx)mx=v}));
+  vis.forEach(s=>{for(let i=R[0];i<=R[1];i++){const v=val(i,s.id);if(v!=null&&v>mx)mx=v}});
   const st=nice(mx/4),top=Math.ceil(mx/st)*st||st;
   return{W,H,L,R,T,B,t0,t1,vis,st,top,x:t=>L+(t1>t0?(t-t0)/(t1-t0):0)*(W-L-R),y:v=>T+(1-v/top)*(H-T-B)};
 }
 function chartHTML(){
   const E=S.entries;
-  if(E.length<2)return E.length?'<p class="hint">Add a second balance update to see the chart.</p>':'';
+  if(R[1]-R[0]<1)return E.length?'<p class="hint">Add a second balance update to see the chart.</p>':'';
   G=geo();let h='<svg id="ch" viewBox="0 0 360 250" role="img" aria-label="Balance history chart">';
   for(let v=0;v<=G.top+1e-9;v+=G.st){const y=G.y(v);h+=`<line x1="${G.L}" x2="${G.W-G.R}" y1="${y}" y2="${y}" stroke="#2a2e38"/><text x="${G.L-6}" y="${y+4}" fill="#9aa0ad" font-size="11" text-anchor="end">${Math.round(v/100)/10}k</text>`}
-  const n=Math.min(8,E.length);
+  const n=Math.min(8,R[1]-R[0]+1);
   for(let k=0;k<n;k++){const t=G.t0+(G.t1-G.t0)*k/(n-1);h+=`<text x="${G.x(t)}" y="244" fill="#9aa0ad" font-size="11" text-anchor="${k?k==n-1?'end':'middle':'start'}">${new Date(t).toLocaleString('en',{month:'short'})}</text>`}
-  G.vis.forEach(s=>{let d='';E.forEach((e,i)=>{const v=val(i,s.id);if(v!=null)d+=(d?'L':'M')+G.x(+new Date(e.date)).toFixed(1)+' '+G.y(v).toFixed(1)});h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-dasharray="${s.d}" stroke-linecap="round"/>`});
+  G.vis.forEach(s=>{let d='';for(let i=R[0];i<=R[1];i++){const v=val(i,s.id);if(v!=null)d+=(d?'L':'M')+G.x(+new Date(E[i].date)).toFixed(1)+' '+G.y(v).toFixed(1)}h+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.5" stroke-dasharray="${s.d}" stroke-linecap="round"/>`});
   return h+'<g id="cross"></g></svg><p class="hint">Drag across the chart. Tap a tile to hide or show its line.</p>';
 }
 function cross(){
@@ -131,7 +147,7 @@ function cross(){
 }
 function onMove(ev){
   const r=$('ch').getBoundingClientRect(),fx=(ev.clientX-r.left)/r.width*360;let b=0,bd=1e9;
-  S.entries.forEach((e,i)=>{const d=Math.abs(G.x(+new Date(e.date))-fx);if(d<bd){bd=d;b=i}});
+  S.entries.forEach((e,i)=>{if(i<R[0]||i>R[1])return;const d=Math.abs(G.x(+new Date(e.date))-fx);if(d<bd){bd=d;b=i}});
   if(b!==sel){sel=b;head();cross()}
 }
 function goalCard(g){
@@ -148,7 +164,7 @@ function goalCard(g){
 function render(){
   $('eye').innerHTML=S.eye?EYEOFF:EYE;
   $('bn').innerHTML=S.entries.length&&S.lastBackup!==month()?'<div class="goal" style="padding:14px"><div class="s" style="margin:0 0 10px">Time for your monthly backup.</div><button class="sm" data-a="mail">Email backup</button></div>':'';
-  head();$('cw').innerHTML=chartHTML();
+  head();$('cw').innerHTML=tabsHTML()+chartHTML();
   $('gl').innerHTML=S.goals.map(goalCard).join('');
   const c=$('ch');if(c){c.onpointerdown=c.onpointermove=onMove;cross()}
 }
@@ -170,7 +186,7 @@ function saveEntry(i){
   if(!Object.keys(v).length)return err('Enter at least one balance.');
   if(i>=0)S.entries.splice(i,1);
   const j=S.entries.findIndex(e=>e.date===d);if(j>=0)S.entries[j].v=v;else S.entries.push({date:d,v});
-  S.entries.sort((a,b)=>a.date<b.date?-1:1);sel=S.entries.findIndex(e=>e.date===d);save();X();
+  S.entries.sort((a,b)=>a.date<b.date?-1:1);sel=S.entries.findIndex(e=>e.date===d);tab=d.slice(0,4);save();X();
 }
 function past(){
   M('<h2>Edit past entries</h2>'+(S.entries.map((e,i)=>`<button class="li" data-a="edit" data-i="${i}"><span>${dm(e.date)}</span><span class="mu">${eur(val(i,'t')||0)}</span></button>`).reverse().join('')||'<p class="mu">No entries yet.</p>')+'<button class="mb" data-a="menu">Back</button>');
@@ -228,6 +244,7 @@ $('file').onchange=e=>{
 };
 
 const ACT={
+  tab:(i,id)=>{tab=id;sel=-1;render()},
   eye:()=>{S.eye=!S.eye;save();render()},
   menu,close:X,
   hide:(i,id)=>{S.hidden=S.hidden.includes(id)?S.hidden.filter(x=>x!==id):S.hidden.concat(id);save();render()},
